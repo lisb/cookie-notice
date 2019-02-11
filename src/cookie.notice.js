@@ -104,7 +104,7 @@
         var noticeText = getStringForCurrentLocale(params.messageLocales);
 
         // Create notice
-        var notice = createNotice(noticeText, params.noticeBgColor, params.noticeTextColor, params.cookieNoticePosition);
+        var notice = createNotice(noticeText, params.noticeBgColor, params.noticeTextColor, params.cookieNoticePosition, params.selector);
 
         var learnMoreLink;
 
@@ -124,18 +124,25 @@
         dismissButton.addEventListener('click', function (e) {
             e.preventDefault();
             setDismissNoticeCookie(parseInt(params.expiresIn + "", 10) * 60 * 1000 * 60 * 24);
-            fadeElementOut(notice);
+            fadeElementOut(notice, params.selector, params.fadeoutHandler);
         });
 
         // Append notice to the DOM
-        var noticeDomElement = document.body.appendChild(notice);
+        var noticeDomElement;
+        var target;
+        if( params.selector ) {
+            target = document.querySelector(params.selector);
+            noticeDomElement = target.insertBefore(notice, target.firstChild);
+        } else {
+            target = document.body;
+            noticeDomElement = document.body.appendChild(notice);
+        }
 
         if (!!learnMoreLink) {
             noticeDomElement.appendChild(learnMoreLink);
         }
 
         noticeDomElement.appendChild(dismissButton);
-
     };
 
     /**
@@ -165,7 +172,8 @@
      * @param position
      * @returns {HTMLElement}
      */
-    function createNotice(message, bgColor, textColor, position) {
+    function createNotice(message, bgColor, textColor, position, selector) {
+        if( !selector ) selector = "body";
 
         var notice = document.createElement('div'),
             noticeStyle = notice.style,
@@ -183,7 +191,7 @@
         noticeStyle.position = 'fixed';
 
         if (position === 'top') {
-            var bodyDOMElement = document.querySelector('body');
+            var bodyDOMElement = document.querySelector( selector );
 
             originPaddingTop = bodyDOMElement.style.paddingTop;
 
@@ -289,7 +297,8 @@
      * Fade a given element out
      * @param element
      */
-    function fadeElementOut(element) {
+    function fadeElementOut(element, selector, fadeoutHandler ) {
+        if( !selector ) selector = "body";
         element.style.opacity = 1;
 
         element.setAttribute('data-test-transitioning', 'true');
@@ -298,11 +307,15 @@
             if ((element.style.opacity -= .1) < 0.01) {
 
                 if (originPaddingTop !== undefined) {
-                    var bodyDOMElement = document.querySelector('body');
+                    var bodyDOMElement = document.querySelector(selector);
                     bodyDOMElement.style.paddingTop = originPaddingTop;
                 }
 
-                document.body.removeChild(element);
+                // elementの削除
+                element.parentElement.removeChild( element );
+
+                // handlerを呼ぶ
+                if( fadeoutHandler ) fadeoutHandler();
             } else {
                 setTimeout(fade, 40);
             }
